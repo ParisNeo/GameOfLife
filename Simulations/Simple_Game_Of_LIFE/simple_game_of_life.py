@@ -1,18 +1,34 @@
+"""
+Game Of Life 
+Author : Saifeddine ALOUI
+Description : Simple Conway's Game Of life
+
+Features :
+    Two modes :
+        Randomly initialized world
+        Hand initialized world 
+"""
+
 import time
 import pygame
 import random
 import sys
 import numpy as np
+import copy
+
+from tkinter import filedialog
+from tkinter import *
+ 
 
 # Define some colors
 black           = (0,0,0)
 white           = (255,255,255)
 
 red             = (200,0,0)
-green           = (0,200,0)
+gray           = (100,100,100)
 
 bright_red      = (255,0,0)
-bright_green    = (0,255,0)
+bright_gray    = (200,200,200)
  
 block_color     = (53,115,255)
 
@@ -42,6 +58,9 @@ pygame.init()
 clock       = pygame.time.Clock()
 screen      = pygame.display.set_mode(WINDOW_SIZE)
 
+# Useful for special initialization
+from_scratch = True
+
 # Set title of screen
 pygame.display.set_caption("Conway's Game of Life")
 # ==================================================================
@@ -52,13 +71,16 @@ def text_objects(text, font):
     return textSurface, textSurface.get_rect()
 
 def button(msg,x,y,w,h,ic,ac,action=None, action_param=None):
+
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
+            
     if x+w > mouse[0] > x and y+h > mouse[1] > y:
         pygame.draw.rect(screen, ac,(x,y,w,h))
 
         if click[0] == 1 and action != None:
-            action()         
+            action() 
+            clock.tick(15)
     else:
         pygame.draw.rect(screen, ic,(x,y,w,h))
 
@@ -85,16 +107,18 @@ def game_intro():
         normalFont = pygame.font.SysFont("comicsansms",20)
         Game_title, Game_title_rect = text_objects("Conway's Game of Life", titleFont)
         Game_author, Game_author_rect = text_objects("Author : Saifeddine ALOUI", normalFont)
-        Game_title_rect.center = ((display_width/2),(display_height/2))
-        Game_author_rect.center = ((display_width/2),(display_height/2+50))
+        Game_title_rect.center = ((display_width/2),(display_height/2)-150)
+        Game_author_rect.center = ((display_width/2),(display_height/2+50)-1560)
         screen.blit(Game_title, Game_title_rect)
         screen.blit(Game_author, Game_author_rect)
 
         
-
-        button("Start Game with spec Init",100,425,300,50,green,bright_green,grid_make)
-        button("Start Game With random Init",100,475,300,50,green,bright_green,random_game)
-        button("Quit",550,450,100,50,red,bright_red,quitgame)
+        button("Reset",250,275,300,50,gray,bright_gray,reset_game)
+        button("Start Game With random Init",250,325,300,50,gray,bright_gray,random_game)
+        button("Start Game with spec Init",250,375,300,50,gray,bright_gray,grid_make)
+        button("Load init from file",250,425,300,50,gray,bright_gray,load_grid)
+        button("Save current init",250,475,300,50,gray,bright_gray,save_grid)
+        button("Quit",250,525,300,50,red,bright_red,quitgame)
 
         pygame.display.update()
         clock.tick(15)    
@@ -129,12 +153,15 @@ def paused():
         pause_rect.center = ((display_width/2),(display_height/2))
         screen.blit(pause_text, pause_rect)
 
-        button("Continue",150,450,100,50,green,bright_green,unpause)
+        button("Continue",150,450,100,50,gray,bright_gray,unpause)
         button("Quit",550,450,100,50,red,bright_red,quitgame)
 
         pygame.display.update()
         clock.tick(15)   
 
+def reset_game():
+    global from_scratch
+    from_scratch = True
 def random_game():        
     init_grid = [[random.randrange(0,2) for x in range(NB_COLS)] for y in range(NB_ROWS)]
     game_loop(init_grid)
@@ -165,6 +192,8 @@ def game_loop(init_grid):
                 if event.key == pygame.K_p:
                     pause = True
                     paused()
+                if event.key == pygame.K_ESCAPE:
+                    done = True
                 
         # Set the screen background
         screen.fill(black)
@@ -216,12 +245,46 @@ def game_loop(init_grid):
         for i in range(0, len(grid)):
             FriendList.append([])
 
+def save_grid():
+    global pause, init_grid, from_scratch
+    root = Tk()
+    root.filename =  filedialog.asksaveasfile(initialdir = "/",title = "Select file",filetypes = (("Grid files","*.grd"),("all files","*.*")))
+    root.quit()
+    file = open(root.filename.name,'w')
+    for row in range(NB_ROWS):
+        for column in range(NB_COLS):
+            file.write("{}".format(init_grid[row][column]))
+        file.write("\n".format(init_grid[row][column]))
+
+def load_grid():
+    global pause, init_grid, from_scratch
+
+    init_grid = []
+   
+    Tk().withdraw()
+    fileName =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("Grid files","*.grd"),("all files","*.*")))
+
+    try:
+        file = open("{}".format(fileName),'r')
+        code = file.readlines()
+        for i in code:
+            templist = list(i)
+            while '\n' in templist:
+                templist.remove('\n')
+            templist2 = []
+            for u in templist:
+                templist2.append(int(u))
+            init_grid.append(templist2)
+        from_scratch = False
+    except:
+        print("")
     
-
 def grid_make():
-    global pause
+    global pause, init_grid, from_scratch
+    if from_scratch == True :
+        init_grid = [[0 for x in range(NB_COLS)] for y in range(NB_ROWS)]
+        from_scratch = False
 
-    grid = [[0 for x in range(NB_COLS)] for y in range(NB_ROWS)]
     # Loop until the user clicks the close button.
     done = False
 
@@ -231,7 +294,7 @@ def grid_make():
     done = False
 
     FriendList = []
-    for i in range(0, len(grid)):
+    for i in range(0, len(init_grid)):
         FriendList.append([])
 
     while not done:
@@ -245,15 +308,17 @@ def grid_make():
                 column = np.int(pos[0] // (WIDTH + MARGIN))
                 row = np.int(pos[1] // (HEIGHT + MARGIN))
                 # Set that location to one
-                if grid[row][column]==1:
-                    grid[row][column] = 0
+                if init_grid[row][column]==1:
+                    init_grid[row][column] = 0
                 else:
-                    grid[row][column] = 1
+                    init_grid[row][column] = 1
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
                     done = True
-
+                if event.key == pygame.K_ESCAPE:
+                    done = True
+                    return
         # Set the screen background
         screen.fill(black)
     
@@ -261,7 +326,7 @@ def grid_make():
         for row in range(NB_ROWS):
             for column in range(NB_COLS):
                 color = black
-                if grid[row][column] == 1:
+                if init_grid[row][column] == 1:
                     color = white
                 pygame.draw.rect(screen,
                                 color,
@@ -274,9 +339,9 @@ def grid_make():
         # Go ahead and update the screen with what we've drawn.
         pygame.display.flip()
         FriendList = []
-        for i in range(0, len(grid)):
+        for i in range(0, len(init_grid)):
             FriendList.append([])
-    game_loop(grid)
+    game_loop(copy.deepcopy(init_grid))
 
 
 game_intro()

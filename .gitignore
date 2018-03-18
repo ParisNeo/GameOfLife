@@ -45,6 +45,9 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
+# Grids
+*.grd
+
 .pytest_cache/
 
 # Translations
