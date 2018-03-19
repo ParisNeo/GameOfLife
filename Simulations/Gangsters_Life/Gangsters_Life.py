@@ -1,7 +1,15 @@
 """
-Game Of Life 
+Gangsteer's Life 
 Author : Saifeddine ALOUI
-Description : Simple Conway's Game Of life
+Description : Inspired from Conway's Game Of life and introducing killer cells that act like gangsters
+The rules are the following .
+    If any neighbor is a killer, you die (so if there are two killers sitting next to each other they both die)
+    The killer is untouchable unless it is in touch with another killer
+    If an empty cell has exactly 3 neighbours it turns into a baby (white)
+    Over population kills (more than 3 neighbors, and you just die)
+    Killers do not live forever. After fiew turns, they die
+    Living cells grow from baby (white), to adult (green) to old (blue) then they die
+
 
 Features :
     Two modes :
@@ -25,6 +33,8 @@ black           = (0,0,0)
 white           = (255,255,255)
 
 red             = (200,0,0)
+green           = (0,200,0)
+blue           = (0,0,200)
 gray           = (100,100,100)
 
 bright_red      = (255,0,0)
@@ -52,6 +62,14 @@ NB_ROWS     = 100
 # This sets the WIDTH and HEIGHT of each grid location
 WIDTH       = WINDOW_SIZE[0]/NB_COLS
 HEIGHT      = WINDOW_SIZE[1]/NB_ROWS
+
+colors_list = [black, white, green, blue, red]
+killer_id = 4 # The red one is the killer
+nb_Friends = [[0 for x in range(NB_COLS)] for y in range(NB_ROWS)]
+has_killer_neighbor = [[False for x in range(NB_COLS)] for y in range(NB_ROWS)]
+cell_age = [[0 for x in range(NB_COLS)] for y in range(NB_ROWS)]
+max_killer_age = 3
+cell_age_step  = 2
 
 # Initialize pygame
 pygame.init()
@@ -105,7 +123,7 @@ def game_intro():
         screen.fill(white)
         titleFont = pygame.font.SysFont("Times New Roaman",80)
         normalFont = pygame.font.SysFont("comicsansms",20)
-        Game_title, Game_title_rect = text_objects("Conway's Game of Life", titleFont)
+        Game_title, Game_title_rect = text_objects("Gangsteer's Life", titleFont)
         Game_author, Game_author_rect = text_objects("Author : Saifeddine ALOUI", normalFont)
         Game_title_rect.center = ((display_width/2),(display_height/2)-150)
         Game_author_rect.center = ((display_width/2),(display_height/2+50)-1560)
@@ -163,7 +181,7 @@ def reset_game():
     global from_scratch
     from_scratch = True
 def random_game():        
-    init_grid = [[random.randrange(0,2) for x in range(NB_COLS)] for y in range(NB_ROWS)]
+    init_grid = [[random.randrange(0,len(colors_list)) for x in range(NB_COLS)] for y in range(NB_ROWS)]
     game_loop(init_grid)
     
 def game_loop(init_grid):
@@ -177,10 +195,6 @@ def game_loop(init_grid):
     clock = pygame.time.Clock()
     # Loop until the user clicks the close button.
     done = False
-
-    FriendList = []
-    for i in range(0, len(grid)):
-        FriendList.append([])
 
     while not done:
         for event in pygame.event.get():  # User did something
@@ -201,9 +215,7 @@ def game_loop(init_grid):
         # Draw the grid
         for row in range(NB_ROWS):
             for column in range(NB_COLS):
-                color = black
-                if grid[row][column] == 1:
-                    color = white
+                color = colors_list[init_grid[row][column]]
                 pygame.draw.rect(screen,
                                 color,
                                 [(MARGIN + WIDTH) * column + MARGIN,
@@ -211,9 +223,10 @@ def game_loop(init_grid):
                                 WIDTH,
                                 HEIGHT],0)            
 
+
         # evolution
-        for y in range(0,len(grid)):
-            for x in range(0,len(grid)):
+        for x in range(NB_ROWS):
+            for y in range(NB_COLS):
                 ymin = y - 1
                 xmin = x - 1
                 yplus = y + 1
@@ -226,24 +239,95 @@ def game_loop(init_grid):
                     xplus = 0
                 if xmin < 0:
                     xmin = len(grid)-1
-                FriendList[y].append(grid[xmin][ymin] + grid[xmin][yplus] + grid[xmin][y] + grid[xplus][ymin] + grid[xplus][yplus] + grid[xplus][y] + grid[x][ymin] + grid[x][yplus])
+                # has a red friend
+                has_killer_neighbor[x][y] = False
+                if(grid[xmin][ymin]==killer_id):
+                    has_killer_neighbor[x][y]= True
+                if(grid[xmin][yplus]==killer_id):
+                    has_killer_neighbor[x][y]= True
+                if(grid[xmin][y]==killer_id):
+                    has_killer_neighbor[x][y]= True
+                if(grid[xplus][ymin]==killer_id):
+                    has_killer_neighbor[x][y]= True
+                if(grid[xplus][yplus]==killer_id):
+                    has_killer_neighbor[x][y]= True
+                if(grid[xplus][y]==killer_id):
+                    has_killer_neighbor[x][y]= True
+                if(grid[x][ymin]==killer_id):
+                    has_killer_neighbor[x][y]= True
+                if(grid[x][yplus]==killer_id):
+                    has_killer_neighbor[x][y]= True
 
-        for x in range(0,len(grid)):
-            for y in range(0,len(grid)):
-                if grid[x][y] == 1:
-                    if FriendList[y][x] > 3:
-                        grid[x][y] = 0
-                    if FriendList[y][x] < 2:
-                        grid[x][y] = 0
-                else:
-                    if FriendList[y][x] == 3:
-                        grid[x][y] = 1
+                # NB friends
+                nb_Friends[x][y]=0
+                if(grid[xmin][ymin]>0):
+                    nb_Friends[x][y]= nb_Friends[x][y]+1
+                if(grid[xmin][yplus]>0):
+                    nb_Friends[x][y]= nb_Friends[x][y]+1
+                if(grid[xmin][y]>0):
+                    nb_Friends[x][y]= nb_Friends[x][y]+1
+                if(grid[xplus][ymin]>0):
+                    nb_Friends[x][y]= nb_Friends[x][y]+1
+                if(grid[xplus][yplus]>0):
+                    nb_Friends[x][y]= nb_Friends[x][y]+1
+                if(grid[xplus][y]>0):
+                    nb_Friends[x][y]= nb_Friends[x][y]+1
+                if(grid[x][ymin]>0):
+                    nb_Friends[x][y]= nb_Friends[x][y]+1
+                if(grid[x][yplus]>0):
+                    nb_Friends[x][y]= nb_Friends[x][y]+1
 
+        for x in range(NB_ROWS):
+            for y in range(NB_COLS):
+                # over population die   
+                if nb_Friends[x][y] > 3:
+                    grid[x][y] = 0
+                    cell_age[x][y] = 0
+                else:    
+                    if(has_killer_neighbor[x][y]):
+                        # no randomnesss version
+                        grid[x][y] = 0 # a killer nearby
+
+                        # With randomness
+                        """
+                        chance = random.randrange(0,100)
+                        if(chance<90): # 90% chance you die
+                            grid[x][y] = 0 # a killer nearby
+                            cell_age[x][y] = 0
+                        elif(chance<95): #5% chance you become a kille
+                            grid[x][y] = killer_id # a killer nearby
+                            cell_age[x][y] = 0
+                        """
+                    else:
+                        if grid[x][y]!=killer_id:
+                            if grid[x][y] > 0:
+                                cell_age[x][y] = cell_age[x][y] +1
+                                # Grow
+                                if cell_age[x][y] >= cell_age_step:
+                                    grid[x][y] = grid[x][y] + 1
+                                    cell_age[x][y] = 0
+
+                                # Too old, then die
+                                if(grid[x][y]>=len(colors_list)-1):
+                                    grid[x][y] = 0
+
+                                # No friends = become a gangster    
+                                if nb_Friends[x][y] == 0:
+                                    grid[x][y] = killer_id
+                                    cell_age[x][y] = 0
+
+                            else:
+                                # two neighbors, make a baby
+                                if nb_Friends[x][y] == 3:
+                                    grid[x][y] = 1
+                        else:
+                            # Aged killers should die
+                            cell_age[x][y] = cell_age[x][y]+1
+                            if cell_age[x][y]>max_killer_age:
+                                grid[x][y] = 0
+                                cell_age[x][y]=0
         # Go ahead and update the screen with what we've drawn.
         pygame.display.flip()
-        FriendList = []
-        for i in range(0, len(grid)):
-            FriendList.append([])
 
 def save_grid():
     global pause, init_grid, from_scratch
@@ -293,10 +377,6 @@ def grid_make():
     # Loop until the user clicks the close button.
     done = False
 
-    FriendList = []
-    for i in range(0, len(init_grid)):
-        FriendList.append([])
-
     while not done:
         for event in pygame.event.get():  # User did something
             if event.type == pygame.QUIT:  # If user clicked close
@@ -325,9 +405,7 @@ def grid_make():
         # Draw the grid
         for row in range(NB_ROWS):
             for column in range(NB_COLS):
-                color = black
-                if init_grid[row][column] == 1:
-                    color = white
+                color = colors_list[init_grid[row][column]]
                 pygame.draw.rect(screen,
                                 color,
                                 [(MARGIN + WIDTH) * column + MARGIN,
@@ -338,9 +416,7 @@ def grid_make():
 
         # Go ahead and update the screen with what we've drawn.
         pygame.display.flip()
-        FriendList = []
-        for i in range(0, len(init_grid)):
-            FriendList.append([])
+
     game_loop(copy.deepcopy(init_grid))
 
 
