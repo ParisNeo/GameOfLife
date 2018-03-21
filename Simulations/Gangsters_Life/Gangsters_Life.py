@@ -24,6 +24,15 @@ import sys
 import numpy as np
 import copy
 
+import os,sys,inspect
+from os.path import join
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0,join(parentdir,'..'))
+
+import Helpers.pygame_helper 
+
+
 from tkinter import filedialog
 from tkinter import *
  
